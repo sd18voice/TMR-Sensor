@@ -8,7 +8,7 @@ def main_func():
     data = []  # Store the data temporarily
 
     # Start serial connection
-    arduino = serial.Serial('/dev/ttyTHS1', 9600, timeout=1)
+    arduino = serial.Serial('/dev/ttyTHS2', 9600, timeout=1)
     print('Establishing serial connection with Arduino...')
 
     # Collect data for exactly 50 samples (50 milliseconds)
