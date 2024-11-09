@@ -17,7 +17,7 @@ def main_func():
     while sample_count < 50:  # Collect 50 samples (50 milliseconds of data)
         arduino_data = arduino.readline().decode("utf-8").strip()  # Read data
         list_values = arduino_data.split("x")
-        
+        print(list_values);
         if len(list_values) == 3:  # Ensure the data format is correct
             try:
                 # Convert values to float
@@ -34,9 +34,9 @@ def main_func():
                 # Increment the sample counter
                 sample_count += 1
             except ValueError:
-                print("Error: Could not convert one of the readings to float.")
+                print("\n Error: Could not convert one of the readings to float.")
         else:
-            print("Error: Incomplete data received from Arduino.")
+            print("\n Error: Incomplete data received from Arduino.")
 
     # Save collected data to CSV after 50 samples
     file_name = 'data.csv'
