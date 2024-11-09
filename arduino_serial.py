@@ -1,64 +1,56 @@
 import serial
-import time
-import schedule
-import csv
-import numpy as np
 import datetime
-from datetime import date
 import pandas as pd
 import os
-from os import path
+import time
 
 def main_func():
-    now = datetime.datetime.now()
-    today = now.year
-    week = now.isocalendar()[1]
-    data=[]
-    df=[]
+    data = []  # Store the data temporarily
 
-    arduino = serial.Serial('/dev/ttyACM0', 9600)
+    # Start serial connection
+    arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
     print('Establishing serial connection with Arduino...')
-    arduino_data = arduino.readline()
 
-    decoded_values = str(arduino_data[0:len(arduino_data)].decode("utf-8"))
-    list_values = decoded_values.split('x')
+    # Collect data for exactly 50 samples (50 milliseconds)
+    sample_count = 0
 
-    for item in list_values:
-        list_in_floats.append(float(item))
+    while sample_count < 50:  # Collect 50 samples (50 milliseconds of data)
+        arduino_data = arduino.readline().decode("utf-8").strip()  # Read data
+        list_values = arduino_data.split("x")
+        
+        if len(list_values) == 3:  # Ensure the data format is correct
+            try:
+                # Convert values to float
+                bmag = float(list_values[0])
+                pow1 = float(list_values[1])
+                temp = float(list_values[2])
 
-    print(f'Collected readings from Arduino: {list_in_floats[0]}[W] {list_in_floats[1]}[V_ac] {list_in_floats[2]}[I_ac] ')
-    time_stamp=str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                # Get the timestamp
+                time_stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")  # Include microseconds
 
-    print(f'Time stamp: {time_stamp}')
-    if path.exists('data_'+str(today)+'W'+str(week)+'.csv') == True:
-        data.append([time_stamp, list_in_floats[0],list_in_floats[1],list_in_floats[2]])
-        node = pd.DataFrame(data, columns=['Time stamp','Active power consumed [W]','Voltage AC [V_ac]','Current AC [I_ac]'])
-        node.to_csv('data_'+str(today)+'W'+str(week)+'.csv', index = None,  mode='a', header=False)
-    else:
-        data.append([time_stamp, list_in_floats[0],list_in_floats[1],list_in_floats[2]])
-        node = pd.DataFrame(data, columns=['Time stamp','Active power consumed [W]','Voltage AC [V_ac]','Current AC [I_ac]'])
-        node.to_csv('data_'+str(today)+'W'+str(week)+'.csv', index = None)
+                # Prepare data for saving
+                data.append([time_stamp, pow1, bmag, temp])
 
-    print('Data saved in csv file')
-    arduino_data = 0
-    list_in_floats.clear()
-    list_values.clear()
-    data.clear()
-    arduino.close()
+                # Increment the sample counter
+                sample_count += 1
+            except ValueError:
+                print("Error: Could not convert one of the readings to float.")
+        else:
+            print("Error: Incomplete data received from Arduino.")
+
+    # Save collected data to CSV after 50 samples
+    file_name = 'data.csv'
+    file_exists = os.path.isfile(file_name)
+    node = pd.DataFrame(data, columns=['Time stamp', 'Active power consumed [W]', 'Voltage AC [V_ac]', 'Current AC [I_ac]'])
+    node.to_csv(file_name, index=False, mode='a', header=not file_exists)  # Only write header if file does not exist
+    
+    print(f"Data saved in {file_name}")
+    
+    arduino.close()  # Close the serial connection
     print('Connection closed')
     print('<--------------------------------------------------------------------------->')
 
-
-# ----------------------------------------Main Code------------------------------------
-# Declare variables to be used
-list_values = []
-list_in_floats = []
-
-print('Program started')
-
-# Setting up the Arduino
-schedule.every(50).seconds.do(main_func)
-
+# Main loop
 while True:
-    schedule.run_pending()
-    time.sleep(4)
+    main_func()  # Collect data for the first 50 samples
+    time.sleep(0.05)  # Wait before starting the next collection cycle (optional)
