@@ -21,6 +21,21 @@ import schedule
 import keras
 import time
 
+
+from keras.callbacks import Callback
+
+class TimeHistory(Callback):
+    def on_train_begin(self, logs={}):
+        self.times = []
+
+    def on_epoch_begin(self, epoch, logs={}):
+        self.epoch_time_start = time.time()
+
+    def on_epoch_end(self, epoch, logs={}):
+        self.times.append(time.time() - self.epoch_time_start)
+
+
+
 #export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1
 
 print('Program started')
@@ -30,11 +45,11 @@ def main_func():
     now = datetime.datetime.now()
     year = now.year
     week = now.isocalendar()[1]
-    df = pd.read_csv('data_'+str(year)+'W'+str(week)+'.csv', engine='python' )
+    df = pd.read_csv('data.csv' )
 
     dim=df.shape[0]
     #samples in one week (60x24x7 = 10 080)
-    t_train=10000 #Here you can change the amount of data you want to start the training.
+    t_train=100 #Here you can change the amount of data you want to start the training.
 
     if dim < t_train:
         print("Need more data to start training...")
@@ -50,13 +65,13 @@ def print_func():
     now = datetime.datetime.now()
     year = now.year
     week = now.isocalendar()[1]
-    df = pd.read_csv('data_'+str(year)+'W'+str(week)+'.csv', engine='python' )
+    df = pd.read_csv('data.csv' )
     print("raw shape:")
     print (df.shape)
     dim=df.shape[0]
 
     df.head()
-    features_considered  = ['Active power consumed [W]','Voltage AC [V_ac]','Current AC [I_ac]']
+    features_considered  = ['TMR', 'Power', 'Temp']
     features = df[features_considered]
     features.index = df['Time stamp']
     features.head()
@@ -73,7 +88,7 @@ def train_func():
     year = now.year
     week = now.isocalendar()[1]
     print("Starting training...")
-    fi = 'data_'+str(year)+'W'+str(week)+'.csv'
+    fi = 'data.csv'
     raw = pd.read_csv(fi, delimiter=',', engine='python' )
     raw = raw.drop('Time stamp', axis=1)
 
@@ -209,7 +224,7 @@ def train_func():
 
         plt.plot([train_size,train_size],[minVal,maxVal],label='train/test limit',color='k')
 
-    plt.ylabel('Active power consumed [W]')
+    plt.ylabel('TMR')
     plt.xlabel('Time [/min]')
     plt.legend()
     plt.show(block=False)
